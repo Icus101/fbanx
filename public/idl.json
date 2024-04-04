@@ -12,11 +12,6 @@
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
-              {
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
@@ -54,75 +49,36 @@
         {
           "name": "poolMint",
           "isMut": true,
-          "isSigner": false,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "pool_mint"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "account": "Amm",
-                "path": "amm"
-              }
-            ]
-          }
+          "isSigner": false
         },
         {
           "name": "vault0",
           "isMut": true,
-          "isSigner": false,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "vault0"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "account": "Amm",
-                "path": "amm"
-              }
-            ]
-          }
+          "isSigner": false
         },
         {
           "name": "vault1",
           "isMut": true,
-          "isSigner": false,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "vault1"
-              },
-              {
-                "kind": "account",
-                "type": "publicKey",
-                "account": "Amm",
-                "path": "amm"
-              }
-            ]
-          }
+          "isSigner": false
         },
         {
           "name": "feeAccount",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false,
+          "relations": [
+            "owner"
+          ]
         },
         {
           "name": "destination",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false,
+          "relations": [
+            "owner"
+          ]
         },
         {
-          "name": "payer",
+          "name": "owner",
           "isMut": true,
           "isSigner": true
         },
@@ -182,11 +138,6 @@
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
-              {
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
@@ -198,37 +149,58 @@
         {
           "name": "amm",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "amm"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Amm",
+                "path": "amm.token_a_mint"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Amm",
+                "path": "amm.token_b_mint"
+              }
+            ]
+          }
         },
         {
-          "name": "vaultSourceInfo",
+          "name": "userSourceInfo",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "relations": [
+            "owner"
+          ]
         },
         {
-          "name": "vaultDestinationInfo",
+          "name": "userDestinationInfo",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "relations": [
+            "owner"
+          ]
         },
         {
           "name": "swapSource",
           "isMut": true,
-          "isSigner": false,
-          "relations": [
-            "owner"
-          ]
+          "isSigner": false
         },
         {
           "name": "swapDestination",
           "isMut": true,
-          "isSigner": false,
-          "relations": [
-            "owner"
-          ]
+          "isSigner": false
         },
         {
           "name": "poolMint",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -287,7 +259,7 @@
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
-                "path": "amm.token_b_account"
+                "path": "amm.token_b_mint"
               }
             ]
           }
@@ -298,11 +270,6 @@
           "isSigner": false,
           "pda": {
             "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
               {
                 "kind": "account",
                 "type": "publicKey",
@@ -346,7 +313,7 @@
         {
           "name": "destination",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "owner",
@@ -408,7 +375,7 @@
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
-                "path": "amm.token_b_account"
+                "path": "amm.token_b_mint"
               }
             ]
           }
@@ -419,11 +386,6 @@
           "isSigner": false,
           "pda": {
             "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
               {
                 "kind": "account",
                 "type": "publicKey",
@@ -464,7 +426,7 @@
         {
           "name": "destination",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "rent",
@@ -517,7 +479,7 @@
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
-                "path": "amm.token_b_account"
+                "path": "amm.token_b_mint"
               }
             ]
           }
@@ -529,11 +491,6 @@
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
-              {
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
@@ -544,7 +501,7 @@
         },
         {
           "name": "owner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -584,6 +541,11 @@
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
@@ -621,7 +583,7 @@
                 "kind": "account",
                 "type": "publicKey",
                 "account": "Amm",
-                "path": "amm.token_b_account"
+                "path": "amm.token_b_mint"
               }
             ]
           }
@@ -632,11 +594,6 @@
           "isSigner": false,
           "pda": {
             "seeds": [
-              {
-                "kind": "const",
-                "type": "string",
-                "value": "authority"
-              },
               {
                 "kind": "account",
                 "type": "publicKey",

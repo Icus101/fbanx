@@ -13,8 +13,9 @@ const FormComp = ({ value, label, handleChange }: Props) => {
         <div className=''>
             <form >
                 <label>{label}:</label><br/>
-                <input value={value} type="number"
+                <input  type="number"
                     required
+                    placeholder="0"
                     onChange={handleChange}
                     className='border-[1px] border-[red] w-[100%] p-[12px_20px] m-[8px_0] box-border rounded-[4px]' />
             </form>

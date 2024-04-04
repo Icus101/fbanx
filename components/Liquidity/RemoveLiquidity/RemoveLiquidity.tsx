@@ -6,17 +6,15 @@ import * as anchor from "@project-serum/anchor";
 import { utils, web3 } from "@project-serum/anchor";
 import {
   TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccount,
-  createAccount,
   getMint,
   getAccount,
+  getAssociatedTokenAddress,
 } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "../../../hooks/useProgram";
 import * as tk from "@solana/spl-token";
-import { feeAccount } from "../../../utils/constant";
 import { tokens } from "./const";
+import { token_pool_mint, token_pool_mint_ata, } from "../../../utils/constant";
 const utf8 = utils.bytes.utf8;
 
 const OWNER_WITHDRAW_FEE_NUMERATOR = 1;
@@ -43,8 +41,11 @@ const RemoveLiquidity = () => {
 
   const [token, setToken] = useState(selectedSubTokens[0]);
   const { program, wallet, connection } = useProgram();
+  const [mint0, setMint0] = useState<PublicKey>(selectedSubTokens[1].tokenAddress);
+  const [mint1, setMint1] = useState<PublicKey>(selectedSubTokens[2].tokenAddress);
 
   const [userAmount, setUserAmount] = useState(0);
+  const [estTokenBAmount, setEstTokenBAmount] = useState<number>(0)
 
   const handleValue = (e: React.FormEvent) => {
     setUserAmount(Number((e.target as HTMLInputElement).value));
@@ -68,7 +69,10 @@ const RemoveLiquidity = () => {
   const handlePairChange = (value: any) => {
     setSelectedTokens(value);
     setSelectedSubTokens(value.subToken);
-    // console.log("inside function", selectedSubTokens);
+    setMint0(value.subToken[1].tokenAddress)
+    setMint1(value.subToken[2].tokenAddress)
+    setUserAmount(0)
+    setEstTokenBAmount(0)
   };
 
   useEffect(() => {
@@ -76,10 +80,101 @@ const RemoveLiquidity = () => {
     setSelectedRadio(selectedTokens.subToken[0].tokenName);
   }, [selectedTokens]);
 
-  //withdraw A
+  const getAmm = async () => {
+    if (!program) {
+      return
+    }
+    const [amm, _ammBump] = await PublicKey.findProgramAddress(
+      [Buffer.from("amm"), mint0.toBuffer(), mint1.toBuffer()],
+      program.programId
+    );
+    return amm
+  }
 
-  let mint0 = selectedSubTokens[1].tokenAddress;
-  let mint1 = selectedSubTokens[2].tokenAddress;
+  const getAuth = async () => {
+    if (!program) {
+      return
+    }
+    let amm = await getAmm()
+    const [authority, _bumpSeed] = await PublicKey.findProgramAddress(
+      [amm!.toBuffer()],
+      program.programId
+    );
+    return authority
+  }
+
+  const getSupply = async () => {
+    const poolMintInfo = await getMint(connection, token_pool_mint);
+    const supply = Number(poolMintInfo.supply);
+    return supply
+  }
+
+  const getVault0 = async () => {
+    try {
+      let poolAuthority = await getAuth()
+      let vault0 = await getAssociatedTokenAddress(mint0, poolAuthority!, true);
+      return vault0
+
+    } catch (error) {
+      return
+    }
+  }
+
+  const getVault1 = async () => {
+    try {
+      let poolAuthority = await getAuth()
+      let vault1 = await getAssociatedTokenAddress(mint1, poolAuthority!, true);
+      return vault1
+
+    } catch (error) {
+      return
+    }
+
+  }
+
+  const calculatePoolTokenAmountfromSourceToken = async () => {
+    try {
+      let supply = await getSupply()
+      let vault0 = await getVault0()
+      const swapTokenA = await getAccount(connection, vault0!);
+      let poolTokenAmount =
+        (userAmount * supply) / (Number(swapTokenA.amount))
+      return poolTokenAmount
+
+    } catch (error) {
+      return
+    }
+
+  }
+
+  const tokenBPrice = async () => {
+    try {
+      let supply = await getSupply()
+      let vault1 = await getVault1()
+      let feeAmount = Math.floor(
+        (userAmount * OWNER_WITHDRAW_FEE_NUMERATOR) /
+        OWNER_WITHDRAW_FEE_DENOMINATOR
+      );
+      let poolTokenAmountWithoutFees = await calculatePoolTokenAmountfromSourceToken()
+      const poolTokenAmount = poolTokenAmountWithoutFees! - feeAmount;
+      const swapTokenB = await getAccount(connection, vault1!);
+      let estTokenBAmount = Math.ceil(
+        ((Number(swapTokenB.amount) * poolTokenAmount!) / supply)
+      );
+
+      setEstTokenBAmount(estTokenBAmount)
+
+    } catch (error) {
+      return
+    }
+
+  }
+
+  useEffect(() => {
+    tokenBPrice()
+  }, [userAmount])
+
+  //withdraw A
 
   const withdrawA = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,36 +187,42 @@ const RemoveLiquidity = () => {
       return;
     }
 
+    console.log(mint0.toBase58());
+    console.log(mint1.toBase58());
+
+
     const [amm, ammBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("amm"), mint0.toBuffer(), mint1.toBuffer()],
+      [Buffer.from("amm"), mint0.toBuffer(), mint1.toBuffer()],
       program.programId
     );
+    console.log('amm', amm.toBase58());
+
     const [poolAuthority, bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("authority"), amm.toBuffer()],
+      [amm.toBuffer()],
       program.programId
     );
-    const [vaultSource, vault0bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault0"), amm.toBuffer()],
-      program.programId
+    console.log('auth', poolAuthority.toBase58());
+
+
+    let vault0 = await getAssociatedTokenAddress(mint0, poolAuthority, true);
+    let vault1 = await getAssociatedTokenAddress(mint1, poolAuthority, true);
+
+    let tokenPool = await getMint(
+      connection,
+      token_pool_mint,
     );
-    const [vaultDest, vault1bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault1"), amm.toBuffer()],
-      program.programId
-    );
-    const [poolMint, poolBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("pool_mint"), amm.toBuffer()],
-      program.programId
-    );
-    let sourceTokenAddress = await tk.getAssociatedTokenAddress(
+
+
+    // let sourceTokenAddress = await tk.getAssociatedTokenAddress(
+    //   mint0,
+    //   wallet.publicKey
+    // );
+    let destTokenAddress = await tk.getAssociatedTokenAddress(
       mint0,
       wallet.publicKey
     );
-    let destTokenAddress = await tk.getAssociatedTokenAddress(
-      mint1,
-      wallet.publicKey
-    );
     let sourcePoolTokenAddress = await tk.getAssociatedTokenAddress(
-      poolMint,
+      tokenPool.address,
       wallet.publicKey
     );
     const tradingTokensToPoolTokens = (
@@ -137,15 +238,15 @@ const RemoveLiquidity = () => {
     };
 
     // Pool token amount to withdraw on one side
-    const withdrawAmount = 50000;
+    // const withdrawAmount = 50000;
     const roundingAmount = 1.0001; // make math a little easier
 
-    const poolMintInfo = await getMint(connection, poolMint);
+    const poolMintInfo = await getMint(connection, tokenPool.address);
     const supply = Number(poolMintInfo.supply);
-    const swapTokenA = await getAccount(connection, vaultSource);
-    const swapTokenAPost = Number(swapTokenA.amount) - withdrawAmount;
+    const swapTokenA = await getAccount(connection, vault0);
+    const swapTokenAPost = Number(swapTokenA.amount) - userAmount;
     const poolTokenA = tradingTokensToPoolTokens(
-      withdrawAmount,
+      userAmount,
       swapTokenAPost,
       supply
     );
@@ -155,33 +256,43 @@ const RemoveLiquidity = () => {
     adjustedPoolTokenA *=
       1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
 
-    const swapTokenB = await getAccount(connection, vaultDest);
-    const swapTokenBPost = Number(swapTokenB.amount) - withdrawAmount;
-    const poolTokenB = tradingTokensToPoolTokens(
-      withdrawAmount,
-      swapTokenBPost,
-      supply
-    );
+    console.log(adjustedPoolTokenA);
 
-    let adjustedPoolTokenB = poolTokenB * roundingAmount;
 
-    adjustedPoolTokenB *=
-      1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
+    // const swapTokenB = await getAccount(connection, vault1);
+    // const swapTokenBPost = Number(swapTokenB.amount) - withdrawAmount;
+    // const poolTokenB = tradingTokensToPoolTokens(
+    //   withdrawAmount,
+    //   swapTokenBPost,
+    //   supply
+    // );
 
-    await program.rpc.withdrawSingle({
-      accounts: {
-        amm: amm,
-        authority: poolAuthority,
-        owner: wallet.publicKey,
-        source: sourcePoolTokenAddress,
-        swapTokenA: vaultSource, //vault address 1
-        swapTokenB: vaultDest, //vault address 2
-        poolMint: poolMint,
-        destination: destTokenAddress,
-        feeAccount: feeAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+    // let adjustedPoolTokenB = poolTokenB * roundingAmount;
+
+    // adjustedPoolTokenB *=
+    //   1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
+
+    let tx = await program.rpc.withdrawSingle(
+      new anchor.BN(userAmount),
+      new anchor.BN(adjustedPoolTokenA),
+      {
+        accounts: {
+          amm: amm,
+          authority: poolAuthority,
+          owner: wallet.publicKey,
+          source: sourcePoolTokenAddress,
+          swapTokenA: vault0, //vault address 1
+          swapTokenB: vault1, //vault address 2
+          poolMint: tokenPool.address,
+          destination: destTokenAddress,
+          feeAccount: token_pool_mint_ata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+      });
+
+    console.log(tx);
+
   };
 
   //withdraw
@@ -198,35 +309,34 @@ const RemoveLiquidity = () => {
     }
 
     const [amm, ammBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("amm"), mint0.toBuffer(), mint1.toBuffer()],
+      [Buffer.from("amm"), mint0.toBuffer(), mint1.toBuffer()],
       program.programId
     );
     const [poolAuthority, bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("authority"), amm.toBuffer()],
+      [amm.toBuffer()],
       program.programId
     );
-    const [vaultSource, vault0bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault0"), amm.toBuffer()],
-      program.programId
+
+    let vault0 = await getAssociatedTokenAddress(mint0, poolAuthority, true);
+    let vault1 = await getAssociatedTokenAddress(mint1, poolAuthority, true);
+
+    let tokenPool = await getMint(
+      connection,
+      token_pool_mint,
     );
-    const [vaultDest, vault1bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault1"), amm.toBuffer()],
-      program.programId
-    );
-    const [poolMint, poolBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("pool_mint"), amm.toBuffer()],
-      program.programId
-    );
-    let sourceTokenAddress = await tk.getAssociatedTokenAddress(
-      mint0,
-      wallet.publicKey
-    );
+
+
+
+    // let sourceTokenAddress = await tk.getAssociatedTokenAddress(
+    //   mint0,
+    //   wallet.publicKey
+    // );
     let destTokenAddress = await tk.getAssociatedTokenAddress(
       mint1,
       wallet.publicKey
     );
     let sourcePoolTokenAddress = await tk.getAssociatedTokenAddress(
-      poolMint,
+      tokenPool.address,
       wallet.publicKey
     );
 
@@ -246,25 +356,25 @@ const RemoveLiquidity = () => {
     const withdrawAmount = 50000;
     const roundingAmount = 1.0001; // make math a little easier
 
-    const poolMintInfo = await getMint(connection, poolMint);
+    const poolMintInfo = await getMint(connection, tokenPool.address);
     const supply = Number(poolMintInfo.supply);
-    const swapTokenA = await getAccount(connection, vaultSource);
-    const swapTokenAPost = Number(swapTokenA.amount) - withdrawAmount;
-    const poolTokenA = tradingTokensToPoolTokens(
-      withdrawAmount,
-      swapTokenAPost,
-      supply
-    );
+    // const swapTokenA = await getAccount(connection, vault0);
+    // const swapTokenAPost = Number(swapTokenA.amount) - withdrawAmount;
+    // const poolTokenA = tradingTokensToPoolTokens(
+    //   withdrawAmount,
+    //   swapTokenAPost,
+    //   supply
+    // );
 
-    let adjustedPoolTokenA = poolTokenA * roundingAmount;
+    // let adjustedPoolTokenA = poolTokenA * roundingAmount;
 
-    adjustedPoolTokenA *=
-      1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
+    // adjustedPoolTokenA *=
+    //   1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
 
-    const swapTokenB = await getAccount(connection, vaultDest);
-    const swapTokenBPost = Number(swapTokenB.amount) - withdrawAmount;
+    const swapTokenB = await getAccount(connection, vault1);
+    const swapTokenBPost = Number(swapTokenB.amount) - userAmount;
     const poolTokenB = tradingTokensToPoolTokens(
-      withdrawAmount,
+      userAmount,
       swapTokenBPost,
       supply
     );
@@ -274,24 +384,29 @@ const RemoveLiquidity = () => {
     adjustedPoolTokenB *=
       1 + OWNER_WITHDRAW_FEE_NUMERATOR / OWNER_WITHDRAW_FEE_DENOMINATOR;
 
-    await program.rpc.withdrawSingle(
-      new anchor.BN(withdrawAmount),
-      new anchor.BN(adjustedPoolTokenA),
+    console.log(adjustedPoolTokenB);
+
+    let tx = await program.rpc.withdrawSingle(
+      new anchor.BN(userAmount),
+      new anchor.BN(adjustedPoolTokenB),
       {
         accounts: {
           amm: amm,
           authority: poolAuthority,
           owner: wallet.publicKey,
           source: sourcePoolTokenAddress,
-          swapTokenA: vaultSource, //vault address 1
-          swapTokenB: vaultDest, //vault address 2
-          poolMint: poolMint,
+          swapTokenA: vault0, //vault address 1
+          swapTokenB: vault1, //vault address 2
+          poolMint: tokenPool.address,
           destination: destTokenAddress,
-          feeAccount: feeAccount,
+          feeAccount: token_pool_mint_ata,
           tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
         },
       }
     );
+    console.log(tx);
+
   };
 
   // withdraw all sc
@@ -306,26 +421,22 @@ const RemoveLiquidity = () => {
       return;
     }
 
-    const [amm, ammBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("amm"), mint0.toBuffer(), mint1.toBuffer()],
+    const [amm, _ammBump] = await PublicKey.findProgramAddress(
+      [Buffer.from("amm"), mint0.toBuffer(), mint1.toBuffer()],
       program.programId
     );
-    const [poolAuthority, bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("authority"), amm.toBuffer()],
+    const [poolAuthority, _bump] = await PublicKey.findProgramAddress(
+      [amm.toBuffer()],
       program.programId
     );
-    const [vaultSource, vault0bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault0"), amm.toBuffer()],
-      program.programId
+    let vault0 = await getAssociatedTokenAddress(mint0, poolAuthority, true);
+    let vault1 = await getAssociatedTokenAddress(mint1, poolAuthority, true);
+
+    let tokenPool = await getMint(
+      connection,
+      token_pool_mint,
     );
-    const [vaultDest, vault1bump] = await PublicKey.findProgramAddress(
-      [utf8.encode("vault1"), amm.toBuffer()],
-      program.programId
-    );
-    const [poolMint, poolBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("pool_mint"), amm.toBuffer()],
-      program.programId
-    );
+
     let sourceTokenAddress = await tk.getAssociatedTokenAddress(
       mint0,
       wallet.publicKey
@@ -336,34 +447,44 @@ const RemoveLiquidity = () => {
     );
 
     let sourcePoolTokenAddress = await tk.getAssociatedTokenAddress(
-      poolMint,
+      tokenPool.address,
       wallet.publicKey
     );
 
-    const poolMintInfo = await getMint(connection, poolMint);
+    const poolMintInfo = await getMint(connection, tokenPool.address);
     const supply = Number(poolMintInfo.supply);
-    const swapTokenA = await getAccount(connection, vaultSource);
-    const swapTokenB = await getAccount(connection, vaultDest);
-    let feeAmount = 0;
-    const POOL_TOKEN_AMOUNT = 10000;
 
-    const poolTokenAmount = POOL_TOKEN_AMOUNT - feeAmount;
+    const swapTokenA = await getAccount(connection, vault0);
+    const swapTokenB = await getAccount(connection, vault1);
+    let feeAmount = 0;
+    // const POOL_TOKEN_AMOUNT = 10000;
+
+    let poolTokenAmountWithoutFees = await calculatePoolTokenAmountfromSourceToken()
+    console.log('pool token amount: ', poolTokenAmountWithoutFees);
+
+
 
     feeAmount = Math.floor(
-      (poolTokenAmount * OWNER_WITHDRAW_FEE_NUMERATOR) /
+      (userAmount * OWNER_WITHDRAW_FEE_NUMERATOR) /
       OWNER_WITHDRAW_FEE_DENOMINATOR
     );
+
+    const poolTokenAmount = poolTokenAmountWithoutFees! - feeAmount;
+
 
     const tokenAAmount = Math.floor(
       (Number(swapTokenA.amount) * poolTokenAmount) / supply
     );
 
     const tokenBAmount = Math.floor(
-      Number(swapTokenB.amount) * poolTokenAmount
+      (Number(swapTokenB.amount) * poolTokenAmount) / supply
     );
+    console.log('A', tokenAAmount);
+    console.log('B', tokenBAmount);
+
 
     await program.rpc.withdrawAll(
-      new anchor.BN(POOL_TOKEN_AMOUNT),
+      new anchor.BN(poolTokenAmount),
       new anchor.BN(tokenAAmount),
       new anchor.BN(tokenBAmount),
       {
@@ -372,12 +493,12 @@ const RemoveLiquidity = () => {
           authority: poolAuthority,
           owner: wallet.publicKey,
           sourceInfo: sourcePoolTokenAddress,
-          vaultTokenA: vaultSource, //vault address 1
-          vaultTokenB: vaultDest, //vault address 2
-          poolMint: poolMint,
+          vaultTokenA: vault0, //vault address 1
+          vaultTokenB: vault1, //vault address 2
+          poolMint: tokenPool.address,
           destTokenAInfo: sourceTokenAddress,
           destTokenBInfo: destTokenAddress,
-          feeAccount: feeAccount,
+          feeAccount: token_pool_mint_ata,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -400,7 +521,7 @@ const RemoveLiquidity = () => {
 
                 <Listbox value={selectedTokens} onChange={handlePairChange}>
                   <div className="relative mt-1">
-                    <Listbox.Button className="relative border p-1 w-full cursor-default rounded-lg py-2 text-left focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
+                    <Listbox.Button className="relative border border-[rgb(29,234,183,0.14)] p-1 w-full cursor-default rounded-lg py-2 text-left focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
                       <span className="truncate flex items-center justify-between">
                         {selectedTokens.name} <BiCaretDown />
                       </span>
@@ -465,11 +586,12 @@ const RemoveLiquidity = () => {
                 <input
                   type="number"
                   placeholder="1000"
-                  className="bg-transparent border outline-none w-3/5 md:w-2/3 p-2 "
+                  className="bg-transparent border border-[rgb(29,234,183,0.14)] rounded-sm outline-none w-3/5 md:w-2/3 p-2 "
+                  value={userAmount}
                   onChange={handleValue}
                 />
 
-                <div className="border text-sm md:text-base px-1 w-2/5 md:first:w-1/3 flex items-center gap-2 justify-center">
+                <div className="border border-[rgb(29,234,183,0.14)] rounded-sm text-sm md:text-base px-1 w-2/5 md:first:w-1/3 flex items-center gap-2 justify-center">
                   {token.icon && (
                     <Image src={token.icon} alt="token" height={30} width={30} />
 
@@ -478,6 +600,14 @@ const RemoveLiquidity = () => {
 
                 </div>
               </div>
+              <input
+                type="number"
+                placeholder="1000"
+                className="bg-transparent border-[rgb(29,234,183,0.14)] rounded-sm border outline-none w-3/5 md:w-2/3 p-2 "
+                value={estTokenBAmount}
+                readOnly
+
+              />
 
               <div className="flex justify-end">
                 <button

@@ -4,23 +4,23 @@ import Usdt from "cryptocurrency-icons/svg/color/usdt.svg";
 import Usdc from "cryptocurrency-icons/svg/color/usdc.svg";
 import Sol from "cryptocurrency-icons/svg/color/sol.svg";
 import Btc from "cryptocurrency-icons/svg/color/btc.svg";
-import logo from "../../../public/logo.png";
+import logo from "/public/Transparent PNG/logo-04.png";
 
 // FBNX/USDT
-export const fbanxUsdt = new Web3.PublicKey(
+export const ccxUsdt = new Web3.PublicKey(
   "5esbBc5dPwN3EXtq1VN7MfeM6idJTXCU3CUTphCWURi4"
 );
 
-export const fbnx = new Web3.PublicKey(
-  "5esbBc5dPwN3EXtq1VN7MfeM6idJTXCU3CUTphCWURi4"
+export const ccx = new Web3.PublicKey(
+  "GkbyHgD2roA6pCSBrNSzqV3szJQQtCToLMpcg3DxLny7"
 );
 
 export const usdt = new Web3.PublicKey(
-  "5esbBc5dPwN3EXtq1VN7MfeM6idJTXCU3CUTphCWURi4"
+  "7gPHzvRMLRXE8sQZJYZeJ3vXmHRbkwqSDgMyN6bM1e8u"
 );
 
 // FBNX/USDC
-export const fbanxUsdc = new Web3.PublicKey(
+export const ccxUsdc = new Web3.PublicKey(
   "5esbBc5dPwN3EXtq1VN7MfeM6idJTXCU3CUTphCWURi4"
 );
 export const usdc = new Web3.PublicKey(
@@ -28,7 +28,7 @@ export const usdc = new Web3.PublicKey(
 );
 
 // FBNX/SOL
-export const fbanxSol = new Web3.PublicKey(
+export const ccxSol = new Web3.PublicKey(
   "5esbBc5dPwN3EXtq1VN7MfeM6idJTXCU3CUTphCWURi4"
 );
 export const sol = new Web3.PublicKey(
@@ -38,22 +38,22 @@ export const sol = new Web3.PublicKey(
 export const tokens = [
   {
     id: 1,
-    name: "FBNX/USDT",
+    name: "CCX/USDT",
     poolAddress: "",
     subToken: [
       {
         id: 0,
-        tokenName: "FBNX/USDT",
+        tokenName: "CCX/USDT",
         // icon: "",
         name: "tokens",
-        tokenAddress: fbanxUsdt,
+        tokenAddress: ccxUsdt,
       },
       {
         id: 1,
-        tokenName: "FBNX",
+        tokenName: "CCX",
         icon: logo,
         name: "tokens",
-        tokenAddress: fbnx,
+        tokenAddress: ccx,
       },
       {
         id: 2,
@@ -67,22 +67,22 @@ export const tokens = [
 
   {
     id: 2,
-    name: "FBNX/USDC",
+    name: "CCX/USDC",
     poolAddress: "",
     subToken: [
       {
         id: 0,
-        tokenName: "FBNX/USDC",
+        tokenName: "CCX/USDC",
         // icon: '',
         name: "tokens",
-        tokenAddress: fbanxUsdc,
+        tokenAddress: ccxUsdc,
       },
       {
         id: 1,
         tokenName: "FBNX",
         icon: logo,
         name: "tokens",
-        tokenAddress: fbnx,
+        tokenAddress: ccx,
       },
       {
         id: 2,
@@ -95,22 +95,22 @@ export const tokens = [
   },
   {
     id: 3,
-    name: "FBNX/SOL",
+    name: "CCX/SOL",
     poolAddress: "",
     subToken: [
       {
         id: 0,
-        tokenName: "FBNX/SOL",
+        tokenName: "CCX/SOL",
         // icon: '',
         name: "tokens",
-        tokenAddress: fbanxSol,
+        tokenAddress: ccxSol,
       },
       {
         id: 1,
-        tokenName: "FBNX",
+        tokenName: "CCX",
         icon: logo,
         name: "tokens",
-        tokenAddress: fbnx,
+        tokenAddress: ccx,
       },
       {
         id: 2,

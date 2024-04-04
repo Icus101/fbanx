@@ -10,35 +10,29 @@ const preflightCommitment = "processed";
 const commitment = "processed";
 
 export const useProgram = () => {
-  // const [program, setProgram] = useState<anchor.Program<anchor.Idl>>();
+  const [program, setProgram] = useState<anchor.Program<anchor.Idl>>();
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
-  const provider = new anchor.AnchorProvider(connection, wallet!, {
-    preflightCommitment,
-    commitment,
-  });
-  const program = new anchor.Program(idl as any, programID, provider);
-  // const wallet = useAnchorWallet();
-  // const { connection } = useConnection();
 
-  // useEffect(() => {
-  //   updateProgram();
-  // }, [connection, wallet]);
 
-  // const updateProgram = () => {
-  //   if (wallet) {
-  //     const provider = new anchor.AnchorProvider(connection, wallet, {
-  //       preflightCommitment,
-  //       commitment,
-  //     });
+  useEffect(() => {
+    updateProgram();
+  }, [connection, wallet]);
 
-  //     const program = new anchor.Program(idl as any, programID, provider);
+  const updateProgram = () => {
+    if (wallet) {
+      const provider = new anchor.AnchorProvider(connection, wallet, {
+        preflightCommitment,
+        commitment,
+      });
 
-  //     setProgram(program);
-  //   } else {
-  //     setProgram(undefined);
-  //   }
-  // };
+      const program = new anchor.Program(idl as any, programID, provider);
+
+      setProgram(program);
+    } else {
+      setProgram(undefined);
+    }
+  };
 
   return {
     program,

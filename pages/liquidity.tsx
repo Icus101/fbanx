@@ -1,14 +1,17 @@
-import React from 'react'
-import Liquidity from "../components/Liquidity/AddLiquidity"
-import Header from '../components/Header'
+import React from "react";
+import Liquidity from "../components/Liquidity/AddLiquidity";
+import Header from "../components/Apppage/Header";
+import Header2 from "../components/Header2";
+import Sidebar from "../components/Apppage/Sidebar";
 
 const liquidity = () => {
   return (
-    <div className='bg-[#161617] text-white h-screen'>
-        <Header />
-          <Liquidity />
-    </div>
-  )
-}
+    <div className=" text-white h-screen">
+      <Header />
 
-export default liquidity
+      <Liquidity />
+    </div>
+  );
+};
+
+export default liquidity;
