@@ -8,7 +8,7 @@ const Header: React.FC = () => {
   const router = useRouter();
 
   return (
-    <div className="flex pr-2 justify-between items-center md:px-12 py-4 fixed w-full z-[1000000]">
+    <div className="flex pr-2 justify-between items-center md:px-12 py-4 fixed w-full z-[10000]">
       <div className="flex items-center gap-x-1 md:gap-x-12">
         <div className="text-3xl font-bold cursor-pointer hidden md:block">
           <Link href="/">
